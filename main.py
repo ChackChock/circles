@@ -307,10 +307,26 @@ def set_mode(key: int, sprites: Group, center: pygame.Vector2) -> None:
     sprites.add(*arcs)
 
 
+def restart(
+    mode: int,
+    all_sprites: Group,
+    particles: Group,
+    ball: Ball,
+    center: pygame.Vector2,
+) -> None:
+    Sprite.speed_mult = 1
+    all_sprites.clear()
+    ball.reset(center)
+    particles.clear()
+    all_sprites.add(ball)
+    set_mode(mode, all_sprites, center)
+
+
 def main() -> None:
     pygame.init()
 
     display = pygame.display.set_mode(flags=pygame.FULLSCREEN | pygame.DOUBLEBUF)
+    display_rect = display.get_rect()
     clock = pygame.Clock()
     font = pygame.Font(None, 32)
 
@@ -318,6 +334,7 @@ def main() -> None:
     center = pygame.Vector2(display.size) / 2
     destroy_on_collide = False
     particles_on_cursor = False
+    mode = pygame.K_1
 
     ball = Ball(center, BALL_RADIUS)
     all_sprites = Group()
@@ -337,13 +354,8 @@ def main() -> None:
 
             elif event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_1, pygame.K_2, pygame.K_3):
-                    Sprite.speed_mult = 1
-                    all_sprites.clear()
-                    ball.reset(center)
-                    particles.clear()
-                    all_sprites.add(ball)
-
-                    set_mode(event.key, all_sprites, center)
+                    mode = event.key
+                    restart(mode, all_sprites, particles, ball, center)
 
                 elif event.key == pygame.K_4:
                     destroy_on_collide = not destroy_on_collide
@@ -391,7 +403,11 @@ def main() -> None:
         all_sprites.update()
         particles.update()
 
-        if len(all_sprites) > 1 and not all_sprites[-1].circle.contains(ball.circle):
+        if len(all_sprites) == 1:
+            if not display_rect.collidepoint(ball.circle.center):
+                restart(mode, all_sprites, particles, ball, center)
+
+        elif not all_sprites[-1].circle.contains(ball.circle):
             arc: Arc = all_sprites[-1]  # type: ignore
 
             if arc.collide_ball(ball):

@@ -122,15 +122,16 @@ class Ball(Sprite):
         dx = circle.center[0] - self.circle.center[0]
         dy = circle.center[1] - self.circle.center[1]
         length = (dx**2 + dy**2) ** 0.5
+        delta = radius - length
         normal = pygame.Vector2(dx, dy).normalize()
         angle = (random() - 0.5) * BALL_REFLECT_ANGLE
 
-        self.circle.move_ip(self.__velocity.normalize() * (radius - length))
+        self.circle.move_ip(self.__velocity.normalize() * delta)
         self.__velocity.reflect_ip(normal.rotate(angle))
 
     def update(self) -> None:
         self.circle.move_ip(self.__velocity * Sprite.speed_mult)
-        self.__velocity.y += BALL_GRAVITY
+        self.__velocity.y += BALL_GRAVITY * Sprite.speed_mult
 
 
 class Arc(Sprite):
@@ -362,6 +363,9 @@ def main() -> None:
 
                 elif event.key == pygame.K_9:
                     particles_on_cursor = not particles_on_cursor
+
+                elif event.key == pygame.K_c:
+                    pygame.mouse.set_visible(not pygame.mouse.get_visible())
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:

@@ -11,6 +11,7 @@ BALL_COLOR = (255, 255, 255)
 BALL_REFLECT_ANGLE = 5
 BALL_GRAVITY = 0.275
 BALL_RADIUS = 12.5
+BALL_FATTING_SPEED = 0.5
 
 ARC_DELTA = pi / 6
 ARC_SPEED_MIN = 150
@@ -42,6 +43,10 @@ class Sprite:
     @property
     def image(self) -> pygame.Surface:
         return self.__image
+
+    @image.setter
+    def image(self, value: pygame.Surface) -> None:
+        self.__image = value.copy()
 
     @property
     def rect(self) -> pygame.FRect:
@@ -102,10 +107,7 @@ class Group:
 
 class Ball(Sprite):
     def __init__(self, center: Point, radius: float) -> None:
-        image = pygame.Surface((radius * 2, radius * 2))
-        pygame.draw.aacircle(image, BALL_COLOR, (radius, radius), radius)
-        image.set_colorkey((0, 0, 0))
-        super().__init__(center, image)
+        super().__init__(center, self._draw_surface(radius))
 
         self.__velocity = pygame.Vector2()
 
@@ -113,9 +115,20 @@ class Ball(Sprite):
     def velocity(self) -> pygame.Vector2:
         return self.__velocity
 
+    def _draw_surface(self, radius: float) -> pygame.Surface:
+        image = pygame.Surface((radius * 2, radius * 2))
+        pygame.draw.aacircle(image, BALL_COLOR, (radius, radius), radius)
+        image.set_colorkey((0, 0, 0))
+        return image
+
+    def resize(self, radius: float) -> None:
+        self.circle.update(self.circle.center, radius)
+        self.image = self._draw_surface(radius)
+
     def reset(self, center: Point) -> None:
         self.__velocity.update(0)
-        self.circle.center = center
+        self.circle.update(*center, BALL_RADIUS)
+        self.image = self._draw_surface(BALL_RADIUS)
 
     def reflect(self, circle: Circle) -> None:
         radius = circle.radius - self.circle.radius
@@ -335,6 +348,7 @@ def main() -> None:
     center = pygame.Vector2(display.size) / 2
     destroy_on_collide = False
     particles_on_cursor = False
+    fatting = False
     mode = pygame.K_1
 
     ball = Ball(center, BALL_RADIUS)
@@ -360,6 +374,9 @@ def main() -> None:
 
                 elif event.key == pygame.K_4:
                     destroy_on_collide = not destroy_on_collide
+
+                elif event.key == pygame.K_5:
+                    fatting = not fatting
 
                 elif event.key == pygame.K_9:
                     particles_on_cursor = not particles_on_cursor
@@ -415,6 +432,14 @@ def main() -> None:
             arc: Arc = all_sprites[-1]  # type: ignore
 
             if arc.collide_ball(ball):
+                if fatting:
+                    radius = min(
+                        ball.circle.radius + BALL_FATTING_SPEED * Sprite.speed_mult,
+                        arc.circle.radius
+                    )
+                    if radius >= arc.circle.radius:
+                        break_arc(arc, particles, center)
+                    ball.resize(radius)
                 if destroy_on_collide:
                     break_arc(arc, particles, center)
                 ball.reflect(arc.circle)
